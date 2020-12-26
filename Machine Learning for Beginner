@@ -1,0 +1,104 @@
+#nama : Julio Victorio Sibarani
+
+import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+!wget command: https://dicodingacademy.blob.core.windows.net/picodiploma/ml_pemula_academy/rockpaperscissors.zip
+
+#Doing extration to the xip file
+import zipfile
+import os
+local_zip = '/content/rockpaperscissors.zip'
+zip_ref = zipfile.ZipFile(local_zip, 'r')
+zip_ref.extractall()
+zip_ref.close()
+
+base_dir = '/content/rockpaperscissors/rps-cv-images'
+os.listdir(base_dir)
+
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    rotation_range=20,
+    horizontal_flip=True,
+    shear_range=0.4,
+    fill_mode='wrap',
+    validation_split=0.4
+)
+
+test_datagen = ImageDataGenerator(
+                    rescale=1./255,
+                    rotation_range=20,
+                    horizontal_flip=True,
+                    shear_range = 0.4,
+                    fill_mode = 'nearest',
+                    validation_split=0.4
+)
+
+train_generator = train_datagen.flow_from_directory(
+    base_dir,
+    target_size=(100,100),
+    shuffle=True,
+    subset='training'
+)
+
+validation_generator = train_datagen.flow_from_directory(
+    base_dir,
+    target_size=(100,100),
+    subset='validation'
+)
+
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Conv2D(16, (3,3), activation='relu', input_shape=(100, 100, 3)),
+    tf.keras.layers.MaxPooling2D(2, 2),
+    tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2, 2),
+    tf.keras.layers.Conv2D(64, (3, 3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2,2),
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(512, activation='relu'),
+    tf.keras.layers.Dense(3, activation='softmax')                                   
+])
+
+model.compile(loss='categorical_crossentropy', 
+              optimizer=tf.optimizers.Adam(),
+              metrics=['accuracy'])
+
+model.fit(
+    train_generator,
+    steps_per_epoch=15,  
+    epochs=15,
+    validation_data=validation_generator, 
+    validation_steps=4, 
+    verbose=2
+)
+
+import numpy as np
+from google.colab import files
+from keras.preprocessing import image
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+%matplotlib inline
+
+uploaded = files.upload()
+
+for a in uploaded.keys():
+
+  #predicting images
+  place = a
+  pict = image.load_img(place, target_size=(100,100))
+  imgplot = plt.imshow(pict)
+  Y = image.img_to_array(pict)
+  Y = np.expand_dims(Y, axis=0)
+
+  picture = np.vstack([Y])
+  categories = model.predict(picture, batch_size=10)
+
+  print(a)
+  if categories[0][0]==1:
+    print('paper')
+  elif categories[0][1]==1:
+    print('rock')
+  elif categories[0][2]==1:
+    print('scissors')
+  else:
+    print('out of criteria')
